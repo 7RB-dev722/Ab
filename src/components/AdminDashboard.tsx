@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ReactDOMServer from 'react-dom/server';
-import { Plus, Edit, Trash2, X, LogOut, Package, DollarSign, RefreshCw, Tag, AlertCircle, CheckCircle, ImageIcon, Eye, EyeOff, Home, UploadCloud, LayoutDashboard, Image as LucideImage, Settings, Link as LinkIcon, Palette, PlayCircle, QrCode, Users, CreditCard, Send, Mail, Printer, MessageSquare, ExternalLink, FileText, KeyRound, Clock, Search, Filter, TimerOff, Save, Copy, Calendar, Hourglass, GripVertical, Bell, BellRing, Radio, Zap, Wifi, BarChart3, Server, MoreVertical, ChevronDown, ChevronUp, AlertTriangle, ShoppingCart, Globe, Scissors, Download, List, History, Smartphone, Hash, Activity, Layers, ShieldCheck, ShieldAlert, Terminal, ImagePlus, MousePointerClick } from 'lucide-react';
+import { Plus, Edit, Trash2, X, LogOut, Package, DollarSign, RefreshCw, Tag, AlertCircle, CheckCircle, ImageIcon, Eye, EyeOff, Home, UploadCloud, LayoutDashboard, Image as LucideImage, Settings, Link as LinkIcon, Palette, PlayCircle, QrCode, Users, CreditCard, Send, Mail, Printer, MessageSquare, ExternalLink, FileText, KeyRound, Clock, Search, Filter, TimerOff, Save, Copy, Calendar, Hourglass, GripVertical, Bell, BellRing, Radio, Zap, Wifi, BarChart3, Server, MoreVertical, ChevronDown, ChevronUp, AlertTriangle, ShoppingCart, Globe, Scissors, Download, List, History, Smartphone, Hash, Activity, Layers, ShieldCheck, ShieldAlert, Terminal, ImagePlus, MousePointerClick, Check, CalendarRange, ArrowRight, UserPlus } from 'lucide-react';
 import { productService, categoryService, winningPhotosService, settingsService, purchaseImagesService, purchaseIntentsService, testSupabaseConnection, Product, Category, WinningPhoto, SiteSetting, PurchaseImage, PurchaseIntent, supabase, invoiceTemplateService, InvoiceTemplateData, ProductKey, productKeysService } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import SiteContentEditor from './SiteContentEditor';
@@ -155,6 +155,33 @@ const SortableTabButton = ({ id, label, icon: Icon, active, onClick }: { id: str
   );
 };
 
+// Modern Checkbox Component (Shared)
+const ModernCheckbox = ({ checked, onChange, id }: { checked: boolean, onChange: () => void, id?: string }) => (
+  <label htmlFor={id} className="relative flex items-center justify-center w-6 h-6 cursor-pointer group">
+    <input 
+      id={id}
+      type="checkbox" 
+      className="peer sr-only" 
+      checked={checked} 
+      onChange={onChange}
+    />
+    <div className={`
+      absolute inset-0 rounded-lg border-2 transition-all duration-300 ease-out
+      ${checked 
+        ? 'bg-gradient-to-br from-cyan-500 to-blue-600 border-transparent shadow-[0_0_10px_rgba(6,182,212,0.5)] scale-100' 
+        : 'bg-slate-800/50 border-slate-600 group-hover:border-slate-500'
+      }
+    `}></div>
+    <Check 
+      className={`
+        w-3.5 h-3.5 text-white z-10 transition-all duration-300 
+        ${checked ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 -rotate-90'}
+      `} 
+      strokeWidth={3}
+    />
+  </label>
+);
+
 // Modern Countdown Timer with Progress Bar and Seconds
 const CountdownTimer = ({ expiryDate, totalDurationDays = 30 }: { expiryDate: Date, totalDurationDays?: number }) => {
     const [timeLeft, setTimeLeft] = useState<{days: number, hours: number, minutes: number, seconds: number, isExpired: boolean} | null>(null);
@@ -301,6 +328,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [newWinningPhotos, setNewWinningPhotos] = useState<{ files: File[]; productName: string; description: string }>({ files: [], productName: WINNING_PHOTO_PRODUCTS[0], description: '' });
   const [imageUploadFile, setImageUploadFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  
+  // Privacy states for Invoice Modal
+  const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
+  const [showInvoiceKeyInput, setShowInvoiceKeyInput] = useState(false);
 
   const winningPhotoFileInputRef = useRef<HTMLInputElement>(null);
   const productImageInputRef = useRef<HTMLInputElement>(null);
@@ -379,6 +410,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       }
     }
   }, [siteSettings, settingsLoading]);
+
+  // Reset privacy states when modal closes
+  useEffect(() => {
+      if (!invoiceModalIntent) {
+          setRevealedKeys(new Set());
+          setShowInvoiceKeyInput(false);
+      }
+  }, [invoiceModalIntent]);
+
+  const toggleKeyReveal = (id: string) => {
+      setRevealedKeys(prev => {
+          const next = new Set(prev);
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+          return next;
+      });
+  };
 
   const handleIncomingIntents = useCallback((newIntents: PurchaseIntent[]) => {
     setPurchaseIntents(prev => {
@@ -975,6 +1023,7 @@ https://discord.gg/pcgamers
           {activeTab === 'key-stats' && <ProductKeyStats products={products} keys={productKeys} />}
           {activeTab === 'expired-keys' && (
             <div className="space-y-8 animate-fade-in-up">
+                {/* ... (Expired keys content remains same) */}
                 {/* Modern Header & Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="relative overflow-hidden bg-gradient-to-br from-blue-900/20 to-slate-900 border border-blue-500/20 rounded-3xl p-6 shadow-lg group hover:border-blue-500/40 transition-all duration-300">
@@ -1304,18 +1353,19 @@ https://discord.gg/pcgamers
           {/* Purchase Intents Tab - Modernized */}
           {activeTab === 'purchase-intents' && (
             <div className="space-y-8 animate-fade-in-up">
+              {/* ... (Top stats and filter bar remain same) ... */}
               {/* Top Stats Cards - Redesigned */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="relative overflow-hidden bg-gradient-to-br from-yellow-900/20 to-slate-900 border border-yellow-500/20 rounded-3xl p-6 shadow-lg group hover:border-yellow-500/40 transition-all duration-300">
-                      <div className="absolute -right-6 -top-6 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-all"></div>
+                  <div className="relative overflow-hidden bg-gradient-to-br from-purple-900/20 to-slate-900 border border-purple-500/20 rounded-3xl p-6 shadow-lg group hover:border-purple-500/40 transition-all duration-300">
+                      <div className="absolute -right-6 -top-6 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all"></div>
                       <div className="relative z-10 flex justify-between items-start">
                           <div>
-                              <p className="text-yellow-400 font-medium text-sm mb-1 flex items-center gap-2">
+                              <p className="text-purple-400 font-medium text-sm mb-1 flex items-center gap-2">
                                   <Clock className="w-4 h-4" /> قيد الانتظار
                               </p>
                               <h3 className="text-4xl font-bold text-white tracking-tight">{pendingIntents.length}</h3>
                           </div>
-                          <div className="p-3 bg-yellow-500/10 rounded-2xl text-yellow-400 border border-yellow-500/20">
+                          <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-400 border border-purple-500/20">
                               <Clock className="w-8 h-8" />
                           </div>
                       </div>
@@ -1360,7 +1410,7 @@ https://discord.gg/pcgamers
                           <div className="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-slate-700">
                               <button 
                                   onClick={() => { setPurchaseIntentFilter('pending'); setPurchaseIntentSearchTerm(''); }} 
-                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${purchaseIntentFilter === 'pending' ? 'bg-yellow-500 text-slate-900 shadow-lg shadow-yellow-500/20' : 'text-gray-400 hover:text-white hover:bg-slate-800'}`}
+                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${purchaseIntentFilter === 'pending' ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:text-white hover:bg-slate-800'}`}
                               >
                                   <Clock className="w-4 h-4" />
                                   <span>قيد الانتظار</span>
@@ -1424,12 +1474,10 @@ https://discord.gg/pcgamers
                   
                   {/* Select All Bar */}
                   <div className="mt-2 px-2 flex items-center gap-2">
-                      <input 
-                          type="checkbox" 
-                          id="selectAllIntents"
-                          className="w-4 h-4 text-cyan-600 bg-slate-700 border-slate-600 rounded focus:ring-cyan-500 cursor-pointer" 
-                          checked={selectedPurchaseIntents.length === intentsToDisplay.length && intentsToDisplay.length > 0} 
-                          onChange={(e) => handleSelectAllPurchaseIntents(e.target.checked)} 
+                      <ModernCheckbox 
+                        id="selectAllIntents"
+                        checked={selectedPurchaseIntents.length === intentsToDisplay.length && intentsToDisplay.length > 0} 
+                        onChange={() => handleSelectAllPurchaseIntents(selectedPurchaseIntents.length !== intentsToDisplay.length)} 
                       />
                       <label htmlFor="selectAllIntents" className="text-xs font-medium text-gray-400 cursor-pointer select-none hover:text-cyan-400 transition-colors">تحديد الكل في هذه القائمة</label>
                   </div>
@@ -1437,7 +1485,9 @@ https://discord.gg/pcgamers
 
               {/* Intents List - Modern Cards */}
               <div className="grid grid-cols-1 gap-4">
-                  {intentsToDisplay.map((intent) => (
+                  {intentsToDisplay.map((intent) => {
+                      const product = products.find(p => p.id === intent.product_id);
+                      return (
                       <div 
                           key={intent.id} 
                           className={`
@@ -1447,14 +1497,12 @@ https://discord.gg/pcgamers
                       >
                           <div className="flex flex-col md:flex-row items-stretch">
                               {/* Status Strip & Checkbox */}
-                              <div className={`w-full md:w-16 flex flex-row md:flex-col items-center justify-center gap-4 p-4 border-b md:border-b-0 md:border-r border-slate-700/50 ${purchaseIntentFilter === 'completed' ? 'bg-green-900/10' : 'bg-yellow-900/10'}`}>
-                                  <input 
-                                      type="checkbox" 
-                                      className="w-5 h-5 text-cyan-600 bg-slate-800 border-slate-600 rounded focus:ring-cyan-500 cursor-pointer" 
-                                      checked={selectedPurchaseIntents.includes(intent.id)} 
-                                      onChange={() => handleTogglePurchaseIntentSelection(intent.id)} 
+                              <div className={`w-full md:w-16 flex flex-row md:flex-col items-center justify-center gap-4 p-4 border-b md:border-b-0 md:border-r border-slate-700/50 ${purchaseIntentFilter === 'completed' ? 'bg-green-900/10' : 'bg-purple-900/10'}`}>
+                                  <ModernCheckbox 
+                                    checked={selectedPurchaseIntents.includes(intent.id)} 
+                                    onChange={() => handleTogglePurchaseIntentSelection(intent.id)} 
                                   />
-                                  <div className={`p-2 rounded-full ${purchaseIntentFilter === 'completed' ? 'text-green-400 bg-green-500/10' : 'text-yellow-400 bg-yellow-500/10'}`}>
+                                  <div className={`p-2 rounded-full ${purchaseIntentFilter === 'completed' ? 'text-green-400 bg-green-500/10' : 'text-purple-400 bg-purple-500/10'}`}>
                                       {purchaseIntentFilter === 'completed' ? <CheckCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                                   </div>
                               </div>
@@ -1464,9 +1512,21 @@ https://discord.gg/pcgamers
                                   {/* Product & User Info */}
                                   <div className="space-y-3 min-w-[300px]">
                                       <div>
-                                          <h4 className="text-white font-bold text-lg flex items-center gap-2">
-                                              {intent.product_title}
-                                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-800 text-gray-400 border border-slate-700">{intent.country}</span>
+                                          <h4 className="text-white font-bold text-lg flex items-center gap-3">
+                                              {/* Product Icon */}
+                                              <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                  {product?.image ? (
+                                                      <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
+                                                  ) : (
+                                                      <Package className="w-5 h-5 text-slate-500" />
+                                                  )}
+                                              </div>
+                                              <div>
+                                                  <div className="flex items-center gap-2">
+                                                      {intent.product_title}
+                                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-800 text-gray-400 border border-slate-700">{intent.country}</span>
+                                                  </div>
+                                              </div>
                                           </h4>
                                           <div className="flex items-center gap-2 text-gray-400 text-sm mt-1">
                                               <Mail className="w-3.5 h-3.5" />
@@ -1525,7 +1585,7 @@ https://discord.gg/pcgamers
                               </div>
                           </div>
                       </div>
-                  ))}
+                  )})}
               </div>
 
               {intentsToDisplay.length === 0 && (
@@ -1549,6 +1609,7 @@ https://discord.gg/pcgamers
           {/* ... (Photos, Settings, Purchase Images tabs - content remains same) */}
           {activeTab === 'purchase-images' && (
             <div className="space-y-8 animate-fade-in-up">
+              {/* ... (Purchase images content) */}
               <div className="bg-slate-900 rounded-2xl border border-cyan-500/30 shadow-2xl shadow-cyan-900/20 overflow-hidden">
                 <div className="bg-slate-800/80 p-4 border-b border-slate-700">
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1612,6 +1673,7 @@ https://discord.gg/pcgamers
               </div>
             </div>
           )}
+          {/* ... (Settings, Products, Categories tabs remain the same) */}
           {activeTab === 'settings' && (
             <div className="space-y-8 max-w-2xl mx-auto animate-fade-in-up">
               {/* ... (Settings content) */}
@@ -1638,6 +1700,7 @@ https://discord.gg/pcgamers
 
               {(isAddingProduct || editingProduct) && ( 
                   <div className="bg-slate-900 rounded-2xl border border-cyan-500/30 shadow-2xl shadow-cyan-900/20 overflow-hidden animate-fade-in-up">
+                      {/* ... (Product form content) ... */}
                       <div className="bg-slate-800/80 p-4 border-b border-slate-700 flex justify-between items-center">
                           <h3 className="text-lg font-bold text-white flex items-center gap-2">
                               <Terminal className="w-5 h-5 text-cyan-400" />
@@ -1698,7 +1761,7 @@ https://discord.gg/pcgamers
                               <label className="block text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2">صورة المنتج</label>
                               <div className="mt-2 flex items-center space-x-6 rtl:space-x-reverse bg-slate-800 p-4 rounded-xl border border-slate-700">
                                   <div className="shrink-0">
-                                      <img className="h-20 w-20 object-contain rounded-lg border border-slate-600 bg-slate-900" src={imagePreviewUrl || newProduct.image || 'https://img-wrapper.vercel.app/image?url=https://placehold.co/100x100/1f2937/38bdf8?text=No+Image'} alt="Product preview"/>
+                                      <img className="h-20 w-20 object-contain rounded-lg border border-slate-600 bg-slate-900" src={imagePreviewUrl || newProduct.image || 'https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://placehold.co/100x100/1f2937/38bdf8?text=No+Image'} alt="Product preview"/>
                                   </div>
                                   <div className="flex-1">
                                       <div className="flex items-center space-x-3 rtl:space-x-reverse">
@@ -1873,8 +1936,94 @@ https://discord.gg/pcgamers
       {/* Modals */}
       {showImageSelector && ( <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-slate-800 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto border border-slate-700"><div className="flex items-center justify-between mb-6"><h3 className="text-xl font-bold text-white">Select an Image</h3><button onClick={() => setShowImageSelector(false)} className="p-2 text-gray-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button></div><div className="mb-6"><div className="flex items-center space-x-4"><span className="text-gray-300 text-sm">Filter:</span><select value={selectedImageCategory} onChange={(e) => setSelectedImageCategory(e.target.value)} className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"><option value="all">All Images</option><option value="logos">Logos</option></select></div></div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{getFilteredImages().map((image) => (<div key={image.id} className="bg-slate-700 rounded-xl p-4 cursor-pointer hover:bg-slate-600 transition-colors border-2 border-transparent hover:border-cyan-500" onClick={() => handleSelectImage(image.path)}><img src={image.path} alt={image.name} className="w-full h-24 object-contain rounded-lg mb-3"/><p className="text-white text-sm font-medium text-center">{image.name}</p><p className="text-gray-400 text-xs text-center mt-1 capitalize">{image.category}</p></div>))}{getFilteredImages().length === 0 && (<div className="text-center py-8"><ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" /><p className="text-gray-400">No images in this category.</p></div>)}</div></div></div> )}
       {showMoveModal && ( <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"><div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 max-w-md w-full animate-fade-in-up"><h3 className="text-xl font-bold text-white mb-4">نقل الصور المحددة</h3><p className="text-gray-400 mb-6">نقل {selectedPhotos.length} صور إلى منتج آخر.</p><select value={moveTargetProduct} onChange={(e) => setMoveTargetProduct(e.target.value)} className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-cyan-500 mb-6"><option value="">اختر المنتج الوجهة</option>{WINNING_PHOTO_PRODUCTS.map(p => <option key={p} value={p}>{p}</option>)}</select><div className="flex justify-end gap-4"><button onClick={() => setShowMoveModal(false)} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">إلغاء</button><button onClick={handleMoveSelected} disabled={!moveTargetProduct || saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 transition-colors">{saving ? 'جاري النقل...' : 'نقل الصور'}</button></div></div></div> )}
-      {isCreatingIntent && ( <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"><div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 max-w-md w-full animate-fade-in-up"><div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold text-white">إنشاء طلب شراء يدوي</h3><button onClick={() => setIsCreatingIntent(false)} className="p-2 text-gray-400 hover:text-white rounded-full"><X className="w-6 h-6" /></button></div><form onSubmit={handleCreateManualIntent} className="space-y-4"><div><label className="block text-sm font-medium text-gray-300 mb-2">المنتج *</label><select value={newIntentData.productId} onChange={(e) => setNewIntentData({ ...newIntentData, productId: e.target.value })} className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-cyan-500" required><option value="">اختر منتجًا</option>{products.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select></div><div><label className="block text-sm font-medium text-gray-300 mb-2">البريد الإلكتروني *</label><input type="email" value={newIntentData.email} onChange={(e) => setNewIntentData({ ...newIntentData, email: e.target.value })} className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl text-white" required placeholder="user@example.com" /></div><div><label className="block text-sm font-medium text-gray-300 mb-2">رقم الهاتف (اختياري)</label><input type="tel" value={newIntentData.phone} onChange={(e) => setNewIntentData({ ...newIntentData, phone: e.target.value })} className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl text-white" placeholder="+1234567890" /></div><div className="flex justify-end gap-4 pt-4"><button type="button" onClick={() => setIsCreatingIntent(false)} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg">إلغاء</button><button type="submit" disabled={saving} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50">{saving ? 'جاري الإنشاء...' : 'إنشاء الطلب'}</button></div></form></div></div> )}
-      {invoiceModalIntent && (() => { const productForIntent = getProductForIntent(invoiceModalIntent); const unusedKeys = productKeys.filter(k => k.product_id === invoiceModalIntent.product_id && !k.is_used); const whatsappPhoneNumber = invoiceModalIntent.phone_number?.replace(/\D/g, '') || ''; const whatsappUrl = `https://wa.me/${whatsappPhoneNumber}?text=${encodeURIComponent(`Hello, here is your invoice and product key for ${invoiceModalIntent.product_title}`)}`; return ( <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"><div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 w-full max-w-[1600px] animate-fade-in-up max-h-[98vh] overflow-y-auto"><div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold text-white">إرسال الفاتورة</h3><button onClick={() => { setInvoiceModalIntent(null); setManualKeyError(null); }} className="p-2 text-gray-400 hover:text-white rounded-full"><X className="w-6 h-6" /></button></div><div className="grid md:grid-cols-2 gap-6"><div className="space-y-4"><h4 className="text-lg font-semibold text-cyan-400 border-b border-slate-700 pb-2">تفاصيل الشراء</h4><p><strong className="text-gray-400">المنتج:</strong> {invoiceModalIntent.product_title}</p><p><strong className="text-gray-400">السعر:</strong> ${productForIntent?.price || 'N/A'}</p><p><strong className="text-gray-400">الدولة:</strong> {invoiceModalIntent.country}</p><div className="flex items-center gap-2"><strong className="text-gray-400">البريد الإلكتروني:</strong><span className="select-all">{invoiceModalIntent.email}</span><button onClick={() => handleCopyText(invoiceModalIntent.email)} className="text-gray-500 hover:text-white transition-colors p-1 rounded hover:bg-slate-700" title="نسخ البريد"><Copy className="w-4 h-4" /></button></div><p><strong className="text-gray-400">الهاتف:</strong> {invoiceModalIntent.phone_number}</p><div className="pt-4"><label className="block text-sm font-medium text-gray-300 mb-2">مفتاح المنتج</label><div className="flex items-center space-x-2 rtl:space-x-reverse"><input type="text" value={productKeyForInvoice || ''} onChange={(e) => { setProductKeyForInvoice(e.target.value); setManualKeyError(null); }} className="flex-1 p-3 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 rounded-xl text-white font-mono text-center tracking-widest h-[46px]" placeholder="أدخل المفتاح يدويًا أو اختر من القائمة" /><button onClick={handleUseManualKey} disabled={isUsingManualKey || !productKeyForInvoice} className="px-4 h-[46px] bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed" title="تأكيد استخدام المفتاح (سيتم إضافته إذا لم يكن موجوداً)">{isUsingManualKey ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}<span>تأكيد / إضافة</span></button></div>{manualKeyError && (<p className="text-sm text-red-400 mt-2 text-center">{manualKeyError}</p>)}<p className="text-xs text-gray-500 mt-1 text-center">ملاحظة: إذا كان المفتاح غير موجود في النظام، سيتم إضافته تلقائياً لهذا المنتج وتعيينه كمستخدم.</p><div className="mt-4"><label className="block text-sm font-medium text-gray-400 mb-2">المفاتيح المتاحة ({unusedKeys.length})</label><div className="bg-slate-900 border border-slate-700 rounded-xl p-2 max-h-60 overflow-y-auto grid grid-cols-1 gap-2">{unusedKeys.length > 0 ? ( unusedKeys.map(key => ( <button key={key.id} onClick={() => { setProductKeyForInvoice(key.key_value); setManualKeyError(null); }} className={`text-left font-mono text-sm p-3 rounded-lg hover:bg-slate-800 transition-all border border-transparent hover:border-cyan-500/30 truncate w-full flex justify-between items-center group ${productKeyForInvoice === key.key_value ? 'bg-cyan-900/20 border-cyan-500/50 text-cyan-400' : 'text-gray-300 bg-slate-800/50'}`} title={key.key_value}><span className="truncate">{key.key_value}</span><span className="text-xs text-gray-500 group-hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity">استخدام</span></button> )) ) : ( <p className="text-center text-gray-500 text-sm py-4">لا توجد مفاتيح متاحة لهذا المنتج</p> )}</div></div></div></div><div><div className="flex justify-between items-center border-b border-slate-700 pb-2 mb-4"><h4 className="text-lg font-semibold text-cyan-400">معاينة الفاتورة</h4><div className="flex items-center gap-2"><span className="text-xs text-gray-400">لون الفاتورة:</span><div className="flex gap-1">{Object.entries(INVOICE_THEMES).map(([key, theme]) => ( <button key={key} onClick={() => setSelectedInvoiceTheme(key)} className={`w-5 h-5 rounded-full border transition-all ${selectedInvoiceTheme === key ? 'border-cyan-400 scale-110 ring-1 ring-cyan-400/50' : 'border-slate-600 hover:scale-105'}`} style={{ backgroundColor: theme.backgroundColor }} title={theme.name} /> ))}</div></div></div><iframe ref={iframeRef} srcDoc={generateInvoiceHTML(invoiceModalIntent, productKeyForInvoice || '')} className="w-full h-[750px] bg-slate-900 rounded-lg border border-slate-700" title="Invoice Preview" /></div></div><div className="mt-8 pt-6 border-t border-slate-700"><div className="flex justify-end gap-4 flex-wrap"><button onClick={() => { setInvoiceModalIntent(null); setManualKeyError(null); }} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">إلغاء</button><button onClick={() => { if (!productKeyForInvoice) { setError("يرجى إدخال أو سحب مفتاح المنتج أولاً."); return; } setShowPrintOptions(true); }} disabled={!productKeyForInvoice} className={`px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice ? 'opacity-50 cursor-not-allowed' : ''}`}><Printer className="w-4 h-4" /><span>طباعة / PDF</span></button><button onClick={handleDownloadInvoiceImage} disabled={!productKeyForInvoice || saving} className={`px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice || saving ? 'opacity-50 cursor-not-allowed' : ''}`}><Download className="w-4 h-4" /><span>تحميل صورة الفاتورة</span></button><a href={!productKeyForInvoice ? undefined : whatsappUrl} target="_blank" rel="noopener noreferrer" className={`px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={(e) => { if (!productKeyForInvoice) e.preventDefault(); }}><MessageSquare className="w-4 h-4" /><span>إرسال عبر WhatsApp</span></a><button onClick={handleCopyInvoiceText} disabled={!productKeyForInvoice} className={`px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice ? 'opacity-50 cursor-not-allowed' : ''}`}><Copy className="w-4 h-4" /><span>نسخ النص</span></button><button onClick={handleSendGmail} disabled={!productKeyForInvoice || saving} className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice || saving ? 'opacity-50 cursor-not-allowed' : ''}`}>{saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}<span>إرسال عبر Gmail</span></button></div></div></div>{showPrintOptions && ( <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4"><div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 w-full max-w-md shadow-2xl shadow-purple-500/10"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold text-white">خيارات الطباعة</h3><button onClick={() => setShowPrintOptions(false)} className="text-gray-400 hover:text-white transition-colors"><X size={24} /></button></div><p className="text-gray-400 mb-6">اختر طريقة الطباعة المفضلة. يمكنك أيضًا استخدام خيار الطباعة لحفظ الفاتورة كملف PDF.</p><div className="space-y-4"><button onClick={handleInternalPrint} className="w-full flex items-center justify-center space-x-3 rtl:space-x-reverse bg-cyan-600 hover:bg-cyan-700 text-white font-bold px-6 py-4 rounded-xl transition-colors"><Printer className="w-5 h-5"/><span>طباعة داخلية (سريع)</span></button><button onClick={handleExternalPrint} className="w-full flex items-center justify-center space-x-3 rtl:space-x-reverse bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-4 rounded-xl transition-colors"><ExternalLink className="w-5 h-5"/><span>طباعة خارجية (فتح في نافذة جديدة)</span></button></div></div></div> )}</div> ); })()}
+      
+      {/* Modern Manual Intent Modal */}
+      {isCreatingIntent && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 rounded-2xl border border-purple-500/30 shadow-2xl shadow-purple-900/20 max-w-md w-full animate-fade-in-up overflow-hidden">
+                {/* Modal Header */}
+                <div className="bg-slate-800/80 p-5 border-b border-slate-700 flex justify-between items-center">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <UserPlus className="w-6 h-6 text-purple-400" />
+                        <span>إنشاء طلب شراء يدوي</span>
+                    </h3>
+                    <button onClick={() => setIsCreatingIntent(false)} className="p-2 text-gray-400 hover:text-white rounded-xl hover:bg-slate-700 transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                
+                {/* Modal Body */}
+                <form onSubmit={handleCreateManualIntent} className="p-6 space-y-5">
+                    <div className="space-y-2">
+                        <label className="block text-xs font-bold text-purple-400 uppercase tracking-wider">المنتج *</label>
+                        <div className="relative">
+                            <select 
+                                value={newIntentData.productId} 
+                                onChange={(e) => setNewIntentData({ ...newIntentData, productId: e.target.value })} 
+                                className="w-full p-3 pl-10 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all appearance-none" 
+                                required
+                            >
+                                <option value="">اختر منتجًا</option>
+                                {products.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                            </select>
+                            <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="block text-xs font-bold text-purple-400 uppercase tracking-wider">البريد الإلكتروني *</label>
+                        <div className="relative">
+                            <input 
+                                type="email" 
+                                value={newIntentData.email} 
+                                onChange={(e) => setNewIntentData({ ...newIntentData, email: e.target.value })} 
+                                className="w-full p-3 pl-10 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all placeholder-gray-500" 
+                                required 
+                                placeholder="user@example.com" 
+                            />
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="block text-xs font-bold text-purple-400 uppercase tracking-wider">رقم الهاتف (اختياري)</label>
+                        <div className="relative">
+                            <input 
+                                type="tel" 
+                                value={newIntentData.phone} 
+                                onChange={(e) => setNewIntentData({ ...newIntentData, phone: e.target.value })} 
+                                className="w-full p-3 pl-10 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all placeholder-gray-500" 
+                                placeholder="+1234567890" 
+                            />
+                            <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                        </div>
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-700/50 mt-2">
+                        <button 
+                            type="button" 
+                            onClick={() => setIsCreatingIntent(false)} 
+                            className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-white rounded-xl transition-colors font-medium text-sm"
+                        >
+                            إلغاء
+                        </button>
+                        <button 
+                            type="submit" 
+                            disabled={saving} 
+                            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-xl transition-all shadow-lg shadow-purple-600/20 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                            <span>{saving ? 'جاري الإنشاء...' : 'إنشاء الطلب'}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
+
+      {invoiceModalIntent && (() => { const productForIntent = getProductForIntent(invoiceModalIntent); const unusedKeys = productKeys.filter(k => k.product_id === invoiceModalIntent.product_id && !k.is_used); const whatsappPhoneNumber = invoiceModalIntent.phone_number?.replace(/\D/g, '') || ''; const whatsappUrl = `https://wa.me/${whatsappPhoneNumber}?text=${encodeURIComponent(`Hello, here is your invoice and product key for ${invoiceModalIntent.product_title}`)}`; return ( <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"><div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 w-full max-w-[1600px] animate-fade-in-up max-h-[98vh] overflow-y-auto"><div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold text-white">إرسال الفاتورة</h3><button onClick={() => { setInvoiceModalIntent(null); setManualKeyError(null); }} className="p-2 text-gray-400 hover:text-white rounded-full"><X className="w-6 h-6" /></button></div><div className="grid md:grid-cols-2 gap-6"><div className="space-y-4"><h4 className="text-lg font-semibold text-cyan-400 border-b border-slate-700 pb-2">تفاصيل الشراء</h4><p><strong className="text-gray-400">المنتج:</strong> {invoiceModalIntent.product_title}</p><p><strong className="text-gray-400">السعر:</strong> ${productForIntent?.price || 'N/A'}</p><p><strong className="text-gray-400">الدولة:</strong> {invoiceModalIntent.country}</p><div className="flex items-center gap-2"><strong className="text-gray-400">البريد الإلكتروني:</strong><span className="select-all">{invoiceModalIntent.email}</span><button onClick={() => handleCopyText(invoiceModalIntent.email)} className="text-gray-500 hover:text-white transition-colors p-1 rounded hover:bg-slate-700" title="نسخ البريد"><Copy className="w-4 h-4" /></button></div><p><strong className="text-gray-400">الهاتف:</strong> {invoiceModalIntent.phone_number}</p><div className="pt-4"><label className="block text-sm font-medium text-gray-300 mb-2">مفتاح المنتج</label><div className="flex items-center space-x-2 rtl:space-x-reverse"><div className="relative flex-1"><input type={showInvoiceKeyInput ? "text" : "password"} value={productKeyForInvoice || ''} onChange={(e) => { setProductKeyForInvoice(e.target.value); setManualKeyError(null); }} className="w-full p-3 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 rounded-xl text-white font-mono text-center tracking-widest h-[46px] pl-10" placeholder="أدخل المفتاح يدويًا أو اختر من القائمة" /><button type="button" onClick={() => setShowInvoiceKeyInput(!showInvoiceKeyInput)} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1">{showInvoiceKeyInput ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></div><button onClick={handleUseManualKey} disabled={isUsingManualKey || !productKeyForInvoice} className="px-4 h-[46px] bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed" title="تأكيد استخدام المفتاح (سيتم إضافته إذا لم يكن موجوداً)">{isUsingManualKey ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}<span>تأكيد / إضافة</span></button></div>{manualKeyError && (<p className="text-sm text-red-400 mt-2 text-center">{manualKeyError}</p>)}<p className="text-xs text-gray-500 mt-1 text-center">ملاحظة: إذا كان المفتاح غير موجود في النظام، سيتم إضافته تلقائياً لهذا المنتج وتعيينه كمستخدم.</p><div className="mt-4"><label className="block text-sm font-medium text-gray-400 mb-2">المفاتيح المتاحة ({unusedKeys.length})</label><div className="bg-slate-900 border border-slate-700 rounded-xl p-2 max-h-60 overflow-y-auto grid grid-cols-1 gap-2">{unusedKeys.length > 0 ? ( unusedKeys.map(key => { const isRevealed = revealedKeys.has(key.id); return ( <div key={key.id} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${productKeyForInvoice === key.key_value ? 'bg-cyan-900/20 border-cyan-500/50' : 'bg-slate-800/50 border-transparent hover:border-cyan-500/30'}`}><div className="flex items-center gap-3 overflow-hidden"><button onClick={() => toggleKeyReveal(key.id)} className="text-gray-500 hover:text-cyan-400 transition-colors p-1 rounded-md hover:bg-slate-700" title={isRevealed ? "إخفاء" : "إظهار"}>{isRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button><span className="font-mono text-sm text-gray-300 truncate" dir="ltr">{isRevealed ? key.key_value : '••••••••••••••••••••••••'}</span></div><button onClick={() => { setProductKeyForInvoice(key.key_value); setManualKeyError(null); }} className="px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-xs font-bold rounded-lg transition-colors border border-cyan-500/20 flex-shrink-0">استخدام</button></div> ); }) ) : ( <p className="text-center text-gray-500 text-sm py-4">لا توجد مفاتيح متاحة لهذا المنتج</p> )}</div></div></div></div><div><div className="flex justify-between items-center border-b border-slate-700 pb-2 mb-4"><h4 className="text-lg font-semibold text-cyan-400">معاينة الفاتورة</h4><div className="flex items-center gap-2"><span className="text-xs text-gray-400">لون الفاتورة:</span><div className="flex gap-1">{Object.entries(INVOICE_THEMES).map(([key, theme]) => ( <button key={key} onClick={() => setSelectedInvoiceTheme(key)} className={`w-5 h-5 rounded-full border transition-all ${selectedInvoiceTheme === key ? 'border-cyan-400 scale-110 ring-1 ring-cyan-400/50' : 'border-slate-600 hover:scale-105'}`} style={{ backgroundColor: theme.backgroundColor }} title={theme.name} /> ))}</div></div></div><iframe ref={iframeRef} srcDoc={generateInvoiceHTML(invoiceModalIntent, productKeyForInvoice || '')} className="w-full h-[750px] bg-slate-900 rounded-lg border border-slate-700" title="Invoice Preview" /></div></div><div className="mt-8 pt-6 border-t border-slate-700"><div className="flex justify-end gap-4 flex-wrap"><button onClick={() => { setInvoiceModalIntent(null); setManualKeyError(null); }} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">إلغاء</button><button onClick={() => { if (!productKeyForInvoice) { setError("يرجى إدخال أو سحب مفتاح المنتج أولاً."); return; } setShowPrintOptions(true); }} disabled={!productKeyForInvoice} className={`px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice ? 'opacity-50 cursor-not-allowed' : ''}`}><Printer className="w-4 h-4" /><span>طباعة / PDF</span></button><button onClick={handleDownloadInvoiceImage} disabled={!productKeyForInvoice || saving} className={`px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice || saving ? 'opacity-50 cursor-not-allowed' : ''}`}><Download className="w-4 h-4" /><span>تحميل صورة الفاتورة</span></button><a href={!productKeyForInvoice ? undefined : whatsappUrl} target="_blank" rel="noopener noreferrer" className={`px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={(e) => { if (!productKeyForInvoice) e.preventDefault(); }}><MessageSquare className="w-4 h-4" /><span>إرسال عبر WhatsApp</span></a><button onClick={handleCopyInvoiceText} disabled={!productKeyForInvoice} className={`px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice ? 'opacity-50 cursor-not-allowed' : ''}`}><Copy className="w-4 h-4" /><span>نسخ النص</span></button><button onClick={handleSendGmail} disabled={!productKeyForInvoice || saving} className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2 ${!productKeyForInvoice || saving ? 'opacity-50 cursor-not-allowed' : ''}`}>{saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}<span>إرسال عبر Gmail</span></button></div></div></div>{showPrintOptions && ( <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4"><div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 w-full max-w-md shadow-2xl shadow-purple-500/10"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold text-white">خيارات الطباعة</h3><button onClick={() => setShowPrintOptions(false)} className="text-gray-400 hover:text-white transition-colors"><X size={24} /></button></div><p className="text-gray-400 mb-6">اختر طريقة الطباعة المفضلة. يمكنك أيضًا استخدام خيار الطباعة لحفظ الفاتورة كملف PDF.</p><div className="space-y-4"><button onClick={handleInternalPrint} className="w-full flex items-center justify-center space-x-3 rtl:space-x-reverse bg-cyan-600 hover:bg-cyan-700 text-white font-bold px-6 py-4 rounded-xl transition-colors"><Printer className="w-5 h-5"/><span>طباعة داخلية (سريع)</span></button><button onClick={handleExternalPrint} className="w-full flex items-center justify-center space-x-3 rtl:space-x-reverse bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-4 rounded-xl transition-colors"><ExternalLink className="w-5 h-5"/><span>طباعة خارجية (فتح في نافذة جديدة)</span></button></div></div></div> )}</div> ); })()}
     </div>
   );
 };

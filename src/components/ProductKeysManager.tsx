@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Product, ProductKey, productKeysService } from '../lib/supabase';
-import { Plus, Trash2, Filter, Undo2, CheckCircle, Copy, Search, X, KeyRound, BarChart3, AlertCircle, Mail, Calendar, Terminal, ShieldCheck, ShieldAlert, Layers } from 'lucide-react';
+import { Plus, Trash2, Undo2, CheckCircle, Copy, Search, X, KeyRound, AlertCircle, Mail, Calendar, Terminal, ShieldCheck, ShieldAlert, Layers, Package, Check, Filter } from 'lucide-react';
 
 interface ProductKeysManagerProps {
   products: Product[];
@@ -20,7 +20,23 @@ const ProductKeysManager: React.FC<ProductKeysManagerProps> = ({ products, keys,
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [isAddMode, setIsAddMode] = useState(false);
 
-  // Calculate Stats
+  // --- Advanced Dynamic Stats Calculation ---
+  // Calculate counts dynamically based on the *other* active filter
+  const getDynamicProductCount = (pId: string) => {
+      return keys.filter(k => 
+          k.product_id === pId && 
+          (filters.status === 'all' ? true : filters.status === 'used' ? k.is_used : !k.is_used)
+      ).length;
+  };
+
+  const getDynamicStatusCount = (statusType: 'available' | 'used' | 'all') => {
+      return keys.filter(k => 
+          (filters.productId === 'all' ? true : k.product_id === filters.productId) &&
+          (statusType === 'all' ? true : statusType === 'used' ? k.is_used : !k.is_used)
+      ).length;
+  };
+
+  // General Stats (Total Inventory)
   const stats = useMemo(() => {
     const total = keys.length;
     const used = keys.filter(k => k.is_used).length;
@@ -183,7 +199,34 @@ const ProductKeysManager: React.FC<ProductKeysManagerProps> = ({ products, keys,
     }
   };
 
-  const getProductName = (productId: string) => products.find(p => p.id === productId)?.title || 'منتج غير معروف';
+  const getProduct = (productId: string) => products.find(p => p.id === productId);
+
+  // Modern Checkbox Component
+  const ModernCheckbox = ({ checked, onChange, disabled = false }: { checked: boolean, onChange: () => void, disabled?: boolean }) => (
+    <label className={`relative flex items-center justify-center w-6 h-6 cursor-pointer group ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+      <input 
+        type="checkbox" 
+        className="peer sr-only" 
+        checked={checked} 
+        onChange={onChange}
+        disabled={disabled}
+      />
+      <div className={`
+        absolute inset-0 rounded-lg border-2 transition-all duration-300 ease-out
+        ${checked 
+          ? 'bg-gradient-to-br from-cyan-500 to-blue-600 border-transparent shadow-[0_0_10px_rgba(6,182,212,0.5)] scale-100' 
+          : 'bg-slate-800/50 border-slate-600 group-hover:border-slate-500'
+        }
+      `}></div>
+      <Check 
+        className={`
+          w-3.5 h-3.5 text-white z-10 transition-all duration-300 
+          ${checked ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 -rotate-90'}
+        `} 
+        strokeWidth={3}
+      />
+    </label>
+  );
 
   return (
     <div className="space-y-8">
@@ -304,22 +347,19 @@ const ProductKeysManager: React.FC<ProductKeysManagerProps> = ({ products, keys,
           </div>
       )}
       
-      {/* 3. Floating Filter Bar */}
+      {/* 3. Floating Filter Bar (Enhanced with Dynamic Counts) */}
       <div className="sticky top-4 z-30 mx-auto max-w-full">
           <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-600/50 rounded-2xl p-4 shadow-2xl flex flex-col md:flex-row gap-4 items-center justify-between">
               
               {/* Left: Selection Info & Bulk Actions */}
               <div className="flex items-center gap-4 w-full md:w-auto">
                   <div className="flex items-center gap-3 bg-slate-900/50 px-3 py-2 rounded-xl border border-slate-700">
-                      <input 
-                          type="checkbox" 
-                          id="selectAllKeys"
-                          className="w-5 h-5 text-cyan-600 bg-slate-700 border-slate-600 rounded focus:ring-cyan-500 cursor-pointer" 
-                          checked={selectedKeys.length === filteredKeys.length && filteredKeys.length > 0} 
-                          onChange={(e) => handleSelectAllKeys(e.target.checked)} 
-                          disabled={filteredKeys.length === 0}
+                      <ModernCheckbox 
+                        checked={selectedKeys.length === filteredKeys.length && filteredKeys.length > 0}
+                        onChange={() => handleSelectAllKeys(selectedKeys.length !== filteredKeys.length)}
+                        disabled={filteredKeys.length === 0}
                       />
-                      <label htmlFor="selectAllKeys" className="text-sm font-medium text-gray-300 cursor-pointer select-none">
+                      <label className="text-sm font-medium text-gray-300 cursor-pointer select-none" onClick={() => handleSelectAllKeys(selectedKeys.length !== filteredKeys.length)}>
                           {selectedKeys.length > 0 ? `تم تحديد ${selectedKeys.length}` : 'تحديد الكل'}
                       </label>
                   </div>
@@ -336,16 +376,23 @@ const ProductKeysManager: React.FC<ProductKeysManagerProps> = ({ products, keys,
                   )}
               </div>
 
-              {/* Right: Filters */}
+              {/* Right: Filters with Dynamic Counts */}
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
                   <div className="relative group">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10">
+                        <Filter className="w-4 h-4" />
+                      </div>
                       <select 
                           value={filters.productId} 
                           onChange={e => setFilters({...filters, productId: e.target.value})} 
-                          className="appearance-none pl-4 pr-10 py-2 bg-slate-900 border border-slate-600 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500 transition-all cursor-pointer hover:bg-slate-800 min-w-[140px]"
+                          className="appearance-none pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500 transition-all cursor-pointer hover:bg-slate-800 min-w-[180px]"
                       >
-                          <option value="all">كل المنتجات</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                          <option value="all">كل المنتجات ({getDynamicProductCount('all')})</option>
+                          {products.map(p => (
+                            <option key={p.id} value={p.id}>
+                                {p.title} ({getDynamicProductCount(p.id)})
+                            </option>
+                          ))}
                       </select>
                   </div>
 
@@ -353,11 +400,11 @@ const ProductKeysManager: React.FC<ProductKeysManagerProps> = ({ products, keys,
                       <select 
                           value={filters.status} 
                           onChange={e => setFilters({...filters, status: e.target.value})} 
-                          className="appearance-none pl-4 pr-10 py-2 bg-slate-900 border border-slate-600 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500 transition-all cursor-pointer hover:bg-slate-800"
+                          className="appearance-none pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500 transition-all cursor-pointer hover:bg-slate-800"
                       >
-                          <option value="all">كل الحالات</option>
-                          <option value="available">متاح</option>
-                          <option value="used">مستخدم</option>
+                          <option value="all">الكل ({getDynamicStatusCount('all')})</option>
+                          <option value="available">متاح ({getDynamicStatusCount('available')})</option>
+                          <option value="used">مستخدم ({getDynamicStatusCount('used')})</option>
                       </select>
                   </div>
 
@@ -368,99 +415,103 @@ const ProductKeysManager: React.FC<ProductKeysManagerProps> = ({ products, keys,
                           placeholder="بحث..." 
                           value={keySearchTerm} 
                           onChange={e => setKeySearchTerm(e.target.value)} 
-                          className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-600 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500 transition-all placeholder-gray-500" 
+                          className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500 transition-all placeholder-gray-500" 
                       />
                   </div>
               </div>
           </div>
       </div>
 
-      {/* 4. Keys Grid (Data Chips Design) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredKeys.map(key => (
+      {/* 4. Keys List (Vertical - Key under Key) */}
+      <div className="flex flex-col gap-3">
+          {filteredKeys.map(key => {
+              const product = getProduct(key.product_id);
+              return (
               <div 
                   key={key.id} 
                   className={`
-                    group relative bg-slate-900/80 backdrop-blur-sm border rounded-xl p-4 transition-all duration-300 flex flex-col gap-3 overflow-hidden
-                    ${selectedKeys.includes(key.id) ? 'border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)]' : 'border-slate-700 hover:border-slate-500 hover:shadow-lg'}
+                    group relative bg-slate-900/80 backdrop-blur-sm border rounded-xl p-4 transition-all duration-300 flex items-center justify-between gap-4 overflow-hidden
+                    ${selectedKeys.includes(key.id) ? 'border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] bg-slate-800' : 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/80'}
                   `}
               >
-                  {/* Decorative Corner */}
-                  <div className={`absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl ${key.is_used ? 'from-red-500/10' : 'from-green-500/10'} to-transparent -mr-8 -mt-8 rounded-full blur-xl`}></div>
-
-                  {/* Header */}
-                  <div className="flex items-start justify-between relative z-10">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                          <input 
-                              type="checkbox" 
-                              className="w-4 h-4 text-cyan-600 bg-slate-800 border-slate-600 rounded focus:ring-cyan-500 cursor-pointer flex-shrink-0" 
-                              checked={selectedKeys.includes(key.id)} 
-                              onChange={() => handleToggleKeySelection(key.id)} 
-                          />
-                          <div className="min-w-0">
-                              <h4 className="text-gray-300 font-medium text-xs truncate" title={getProductName(key.product_id)}>
-                                  {getProductName(key.product_id)}
+                  {/* Left: Checkbox + Product Info */}
+                  <div className="flex items-center gap-4 min-w-[250px]">
+                      <ModernCheckbox 
+                        checked={selectedKeys.includes(key.id)}
+                        onChange={() => handleToggleKeySelection(key.id)}
+                      />
+                      
+                      <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {product?.image ? (
+                                  <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
+                              ) : (
+                                  <Package className="w-5 h-5 text-slate-500" />
+                              )}
+                          </div>
+                          <div>
+                              <h4 className="text-white font-bold text-sm truncate max-w-[150px]" title={product?.title}>
+                                  {product?.title || 'منتج غير معروف'}
                               </h4>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                  <span className={`w-2 h-2 rounded-full ${key.is_used ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]' : 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]'}`}></span>
-                                  <span className={`text-[10px] font-bold uppercase tracking-wider ${key.is_used ? 'text-red-400' : 'text-green-400'}`}>
-                                      {key.is_used ? 'مستخدم' : 'متاح'}
-                                  </span>
+                              <div className="text-xs text-gray-500 mt-0.5 font-mono">
+                                  {new Date(key.created_at).toLocaleDateString('en-GB')}
                               </div>
                           </div>
                       </div>
-                      
-                      {/* Quick Actions */}
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  </div>
+
+                  {/* Middle: The Key */}
+                  <div className="flex-1 flex justify-center">
+                      <div className="bg-black/40 px-4 py-2 rounded-lg border border-slate-700/50 flex items-center gap-3 group-hover:border-slate-600 transition-colors max-w-md w-full justify-between">
+                          <code className="text-cyan-100 font-mono text-base tracking-widest select-all">{key.key_value}</code>
+                          <button onClick={() => handleCopyKey(key.key_value)} className="text-gray-500 hover:text-white transition-colors" title="نسخ">
+                              {copiedKey === key.key_value ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                      </div>
+                  </div>
+
+                  {/* Right: Status & Actions */}
+                  <div className="flex items-center gap-6 min-w-[200px] justify-end">
+                      {/* Status Badge */}
+                      <div className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-2 ${key.is_used ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
                           {key.is_used ? (
-                              <button onClick={() => handleReturnKey(key.id)} className="p-1.5 text-yellow-400 hover:bg-yellow-500/10 rounded-lg transition-colors" title="إرجاع">
+                              <>
+                                  <ShieldAlert className="w-3 h-3" />
+                                  <span>مستخدم</span>
+                              </>
+                          ) : (
+                              <>
+                                  <ShieldCheck className="w-3 h-3" />
+                                  <span>متاح</span>
+                              </>
+                          )}
+                      </div>
+
+                      {/* User Info (if used) */}
+                      {key.is_used && (
+                          <div className="hidden xl:flex flex-col text-right text-[10px] text-gray-500">
+                              <span className="text-gray-400 hover:text-white transition-colors cursor-pointer" title={key.used_by_email || ''}>
+                                  {key.used_by_email ? key.used_by_email.split('@')[0] : 'Unknown'}
+                              </span>
+                              <span>{key.used_at ? new Date(key.used_at).toLocaleDateString('en-GB') : '-'}</span>
+                          </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          {key.is_used ? (
+                              <button onClick={() => handleReturnKey(key.id)} className="p-2 text-yellow-400 hover:bg-yellow-500/10 rounded-lg transition-colors border border-transparent hover:border-yellow-500/20" title="إرجاع">
                                   <Undo2 className="w-4 h-4" />
                               </button>
                           ) : (
-                              <button onClick={() => handleDeleteKey(key.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="حذف">
+                              <button onClick={() => handleDeleteKey(key.id)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20" title="حذف">
                                   <Trash2 className="w-4 h-4" />
                               </button>
                           )}
                       </div>
                   </div>
-
-                  {/* Key Value Display */}
-                  <div className="bg-black/40 p-3 rounded-lg border border-slate-700/50 flex items-center justify-between gap-2 group-hover:border-slate-600 transition-colors relative overflow-hidden">
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-500 to-blue-600 opacity-50"></div>
-                      <div className="flex items-center gap-2 overflow-hidden pl-2">
-                          <KeyRound className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                          <code className="text-cyan-100 font-mono text-sm truncate select-all tracking-wider">{key.key_value}</code>
-                      </div>
-                      <button onClick={() => handleCopyKey(key.key_value)} className="text-gray-500 hover:text-white p-1.5 hover:bg-slate-700 rounded-lg transition-colors flex-shrink-0" title="نسخ">
-                          {copiedKey === key.key_value ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                      </button>
-                  </div>
-
-                  {/* Footer Info */}
-                  {key.is_used && (
-                      <div className="mt-auto pt-2 border-t border-slate-700/30 flex flex-col gap-1.5 text-[11px] text-gray-500">
-                          <div className="flex items-center gap-1.5 text-gray-400 w-full">
-                              <Mail className="w-3 h-3 text-slate-500" />
-                              <span className="truncate hover:text-white transition-colors select-all">{key.used_by_email || 'غير معروف'}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5">
-                                  <Calendar className="w-3 h-3 text-slate-500" />
-                                  <span>{key.used_at ? new Date(key.used_at).toLocaleDateString('en-GB') : '-'}</span>
-                              </div>
-                              <span className="font-mono text-slate-600">{key.used_at ? new Date(key.used_at).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}) : ''}</span>
-                          </div>
-                      </div>
-                  )}
-                  
-                  {!key.is_used && (
-                      <div className="mt-auto pt-2 border-t border-slate-700/30 flex items-center justify-between text-[11px] text-gray-600">
-                          <span>تاريخ الإضافة:</span>
-                          <span className="font-mono">{new Date(key.created_at).toLocaleDateString('en-GB')}</span>
-                      </div>
-                  )}
               </div>
-          ))}
+          )})}
       </div>
 
       {filteredKeys.length === 0 && (
