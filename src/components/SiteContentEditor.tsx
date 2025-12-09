@@ -1,0 +1,506 @@
+import React, { useState, useRef } from 'react';
+import { supabase } from '../lib/supabase';
+import { Save, UploadCloud, Image as ImageIcon, Heading1, Heading2, Copyright, Shield, Target, Zap, RefreshCw, X, CreditCard, Trash2, BookText } from 'lucide-react';
+
+interface SiteContentEditorProps {
+    settings: Record<string, string>;
+    onSettingsChange: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+    onSave: () => void;
+    saving: boolean;
+    setSaving: (saving: boolean) => void;
+    setError: (error: string | null) => void;
+    setSuccess: (success: string | null) => void;
+}
+
+const AVAILABLE_IMAGES = [
+  { id: 'cheatloop-logo', name: 'Cheatloop Logo', path: '/cheatloop copy.png', category: 'logos' },
+  { id: 'cheatloop-original', name: 'Cheatloop Original', path: '/cheatloop.png', category: 'logos' },
+  { id: 'sinki-logo', name: 'Sinki Logo', path: '/sinki copy.jpg', category: 'logos' },
+  { id: 'sinki-original', name: 'Sinki Original', path: '/sinki.jpg', category: 'logos' }
+];
+
+const SectionWrapper: React.FC<{ title: string; icon: React.ElementType; children: React.ReactNode }> = ({ title, icon: Icon, children }) => (
+    <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
+        <h3 className="text-xl font-bold text-white mb-6 flex items-center space-x-3">
+            <Icon className="w-6 h-6 text-cyan-400" />
+            <span>{title}</span>
+        </h3>
+        <div className="space-y-6">{children}</div>
+    </div>
+);
+
+const InputField: React.FC<{ label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; placeholder?: string }> = ({ label, value, onChange, placeholder }) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+        <input
+            type="text"
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+        />
+    </div>
+);
+
+const TextAreaField: React.FC<{ label: string; value: string; onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void; placeholder?: string; rows?: number; dir?: 'ltr' | 'rtl' }> = ({ label, value, onChange, placeholder, rows = 3, dir }) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+        <textarea
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            rows={rows}
+            dir={dir}
+            className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+        />
+    </div>
+);
+
+const ImageUploadField: React.FC<{
+    label: string;
+    imageUrl: string;
+    onImageChange: (url: string) => void;
+    saving: boolean;
+    setSaving: (saving: boolean) => void;
+    setError: (error: string | null) => void;
+    setSuccess: (success: string | null) => void;
+}> = ({ label, imageUrl, onImageChange, saving, setSaving, setError, setSuccess }) => {
+    const [file, setFile] = useState<File | null>(null);
+    const [preview, setPreview] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            setFile(selectedFile);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreview(reader.result as string);
+            };
+            reader.readAsDataURL(selectedFile);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!file) {
+            setError('Please select a file to upload.');
+            return;
+        }
+        if (!supabase) {
+            setError('Supabase client is not configured.');
+            return;
+        }
+
+        setSaving(true);
+        setError(null);
+        try {
+            const filePath = `site-asset-instruction-${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+            const { error: uploadError } = await supabase.storage
+                .from('site-assets')
+                .upload(filePath, file);
+
+            if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('site-assets')
+                .getPublicUrl(filePath);
+
+            onImageChange(publicUrl);
+            setSuccess(`Image for "${label}" uploaded. Remember to save all changes to apply.`);
+            setFile(null);
+            setPreview(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        } catch (err: any) {
+            setError(err.message || 'Failed to upload image.');
+        } finally {
+            setSaving(false);
+        }
+    };
+    
+    const handleRemove = () => {
+        onImageChange('');
+        setFile(null);
+        setPreview(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        setSuccess(`Image for "${label}" removed. Remember to save all changes to apply.`);
+    };
+
+    return (
+         <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+            <div className="flex items-center space-x-4">
+                <img
+                    src={preview || imageUrl || 'https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://placehold.co/150x100/1f2937/38bdf8?text=No+Image'}
+                    alt={`${label} Preview`}
+                    className="w-36 h-24 object-contain rounded-lg bg-slate-700 p-1 border border-slate-600"
+                />
+                <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="cursor-pointer flex items-center justify-center space-x-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-xl transition-colors text-sm">
+                            <UploadCloud className="w-4 h-4" />
+                            <span>Choose Image</span>
+                        </button>
+                        {(imageUrl || preview) && (
+                            <button type="button" onClick={handleRemove} className="flex items-center space-x-2 px-4 py-2 bg-red-900/50 hover:bg-red-900/80 text-red-300 rounded-xl transition-colors text-sm">
+                                <Trash2 className="w-4 h-4" />
+                                <span>Remove</span>
+                            </button>
+                        )}
+                    </div>
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                    {file && (
+                        <div className="mt-2 flex items-center space-x-3">
+                            <p className="text-sm text-gray-400 truncate w-40">{file.name}</p>
+                            <button onClick={handleUpload} disabled={saving} className="flex items-center space-x-2 px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-sm disabled:opacity-50">
+                                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <span>Upload</span>}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const SiteContentEditor: React.FC<SiteContentEditorProps> = ({ settings, onSettingsChange, onSave, saving, setSaving, setError, setSuccess }) => {
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    
+    const [faviconFile, setFaviconFile] = useState<File | null>(null);
+    const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+
+    const [activeLibraryField, setActiveLibraryField] = useState<string | null>(null);
+
+    const handleSettingChange = (key: string, value: string) => {
+        onSettingsChange(prev => ({ ...prev, [key]: value }));
+    };
+
+    const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setLogoFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setLogoPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleFaviconFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setFaviconFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFaviconPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleLogoUpload = async () => {
+        if (!logoFile) {
+            setError('Please select a logo file to upload.');
+            return;
+        }
+        if (!supabase) {
+            setError('Supabase client is not configured.');
+            return;
+        }
+
+        setSaving(true);
+        setError(null);
+        try {
+            const filePath = `logo-${Date.now()}-${logoFile.name.replace(/\s/g, '_')}`;
+            const { error: uploadError } = await supabase.storage
+                .from('site-assets')
+                .upload(filePath, logoFile);
+
+            if (uploadError) {
+                throw new Error(`Failed to upload logo: ${uploadError.message}`);
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('site-assets')
+                .getPublicUrl(filePath);
+
+            handleSettingChange('site_logo_url', publicUrl);
+            setSuccess('Logo uploaded successfully! Remember to save all changes.');
+            setLogoFile(null);
+            setLogoPreview(null);
+        } catch (err: any) {
+            setError(err.message || 'Failed to upload logo.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleFaviconUpload = async () => {
+        if (!faviconFile) {
+            setError('Please select a favicon file to upload.');
+            return;
+        }
+        if (!supabase) {
+            setError('Supabase client is not configured.');
+            return;
+        }
+
+        setSaving(true);
+        setError(null);
+        try {
+            const filePath = `favicon-${Date.now()}-${faviconFile.name.replace(/\s/g, '_')}`;
+            const { error: uploadError } = await supabase.storage
+                .from('site-assets')
+                .upload(filePath, faviconFile);
+
+            if (uploadError) {
+                throw new Error(`Failed to upload favicon: ${uploadError.message}`);
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('site-assets')
+                .getPublicUrl(filePath);
+
+            handleSettingChange('site_favicon_url', publicUrl);
+            setSuccess('Favicon uploaded successfully! Remember to save all changes.');
+            setFaviconFile(null);
+            setFaviconPreview(null);
+        } catch (err: any) {
+            setError(err.message || 'Failed to upload favicon.');
+        } finally {
+            setSaving(false);
+        }
+    };
+    
+    const handleSelectFromLibrary = (imagePath: string) => {
+        if (activeLibraryField) {
+            handleSettingChange(activeLibraryField, imagePath);
+            setActiveLibraryField(null);
+            
+            if (activeLibraryField === 'site_logo_url') {
+                setLogoFile(null);
+                setLogoPreview(null);
+            } else if (activeLibraryField === 'site_favicon_url') {
+                setFaviconFile(null);
+                setFaviconPreview(null);
+            }
+
+            setSuccess('Image selected from library. Remember to save changes.');
+            setTimeout(() => setSuccess(null), 3000);
+        }
+    };
+
+    return (
+        <div className="space-y-8">
+            <SectionWrapper title="Header & Logo" icon={ImageIcon}>
+                <InputField
+                    label="Site Name"
+                    value={settings.site_name || ''}
+                    onChange={(e) => handleSettingChange('site_name', e.target.value)}
+                    placeholder="e.g., Cheatloop"
+                />
+                
+                {/* Site Logo Section */}
+                <div className="border-b border-slate-700 pb-6 mb-6">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Site Logo</label>
+                    <div className="flex items-center space-x-6">
+                        <img
+                            src={logoPreview || settings.site_logo_url || 'https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://placehold.co/100x100/1f2937/38bdf8?text=Logo'}
+                            alt="Site Logo Preview"
+                            className="w-20 h-20 object-contain rounded-lg bg-slate-700 p-2 border border-slate-600"
+                        />
+                        <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                                <label htmlFor="logo-upload" className="cursor-pointer flex items-center justify-center space-x-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-xl transition-colors text-sm">
+                                    <UploadCloud className="w-4 h-4" />
+                                    <span>Choose New Logo</span>
+                                </label>
+                                <input type="file" id="logo-upload" className="hidden" accept="image/png, image/jpeg, image/webp, image/svg+xml" onChange={handleLogoFileChange} />
+                                <button type="button" onClick={() => setActiveLibraryField('site_logo_url')} className="cursor-pointer flex items-center justify-center space-x-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-xl transition-colors text-sm">
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span>Library</span>
+                                </button>
+                            </div>
+                            {logoFile && (
+                                <div className="mt-2 flex items-center space-x-3">
+                                    <p className="text-sm text-gray-400 truncate">{logoFile.name}</p>
+                                    <button onClick={handleLogoUpload} disabled={saving} className="flex items-center space-x-2 px-4 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-sm disabled:opacity-50">
+                                        {saving && <RefreshCw className="w-4 h-4 animate-spin" />}
+                                        <span>{saving ? 'Uploading...' : 'Upload'}</span>
+                                    </button>
+                                </div>
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">For best results, use a transparent PNG or SVG.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Site Favicon Section */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Site Favicon (Browser Tab Icon)</label>
+                    <div className="flex items-center space-x-6">
+                        <img
+                            src={faviconPreview || settings.site_favicon_url || 'https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://img-wrapper.vercel.app/image?url=https://placehold.co/100x100/1f2937/38bdf8?text=Icon'}
+                            alt="Site Favicon Preview"
+                            className="w-12 h-12 object-contain rounded-lg bg-slate-700 p-2 border border-slate-600"
+                        />
+                        <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                                <label htmlFor="favicon-upload" className="cursor-pointer flex items-center justify-center space-x-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-xl transition-colors text-sm">
+                                    <UploadCloud className="w-4 h-4" />
+                                    <span>Choose New Favicon</span>
+                                </label>
+                                <input type="file" id="favicon-upload" className="hidden" accept="image/png, image/jpeg, image/webp, image/x-icon" onChange={handleFaviconFileChange} />
+                                <button type="button" onClick={() => setActiveLibraryField('site_favicon_url')} className="cursor-pointer flex items-center justify-center space-x-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-xl transition-colors text-sm">
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span>Library</span>
+                                </button>
+                            </div>
+                            {faviconFile && (
+                                <div className="mt-2 flex items-center space-x-3">
+                                    <p className="text-sm text-gray-400 truncate">{faviconFile.name}</p>
+                                    <button onClick={handleFaviconUpload} disabled={saving} className="flex items-center space-x-2 px-4 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-sm disabled:opacity-50">
+                                        {saving && <RefreshCw className="w-4 h-4 animate-spin" />}
+                                        <span>{saving ? 'Uploading...' : 'Upload'}</span>
+                                    </button>
+                                </div>
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">Recommended size: 32x32 or 64x64. Formats: PNG, ICO.</p>
+                        </div>
+                    </div>
+                </div>
+            </SectionWrapper>
+
+            <SectionWrapper title="Hero Section" icon={Heading1}>
+                <InputField
+                    label="Main Title"
+                    value={settings.hero_title || ''}
+                    onChange={(e) => handleSettingChange('hero_title', e.target.value)}
+                    placeholder="e.g., Dominate the Game"
+                />
+                <TextAreaField
+                    label="Subtitle"
+                    value={settings.hero_subtitle || ''}
+                    onChange={(e) => handleSettingChange('hero_subtitle', e.target.value)}
+                    placeholder="A short, catchy description for your site."
+                    rows={4}
+                />
+            </SectionWrapper>
+
+            <SectionWrapper title="Hero Features" icon={Heading2}>
+                <div className="grid md:grid-cols-3 gap-6">
+                    <div className="bg-slate-700/50 p-4 rounded-xl space-y-3">
+                        <div className="flex items-center space-x-2 text-gray-300"><Shield size={18} /> <h4 className="font-bold">Feature 1</h4></div>
+                        <InputField label="Title" value={settings.feature_1_title || ''} onChange={(e) => handleSettingChange('feature_1_title', e.target.value)} />
+                        <InputField label="Description" value={settings.feature_1_desc || ''} onChange={(e) => handleSettingChange('feature_1_desc', e.target.value)} />
+                    </div>
+                    <div className="bg-slate-700/50 p-4 rounded-xl space-y-3">
+                        <div className="flex items-center space-x-2 text-gray-300"><Target size={18} /> <h4 className="font-bold">Feature 2</h4></div>
+                        <InputField label="Title" value={settings.feature_2_title || ''} onChange={(e) => handleSettingChange('feature_2_title', e.target.value)} />
+                        <InputField label="Description" value={settings.feature_2_desc || ''} onChange={(e) => handleSettingChange('feature_2_desc', e.target.value)} />
+                    </div>
+                    <div className="bg-slate-700/50 p-4 rounded-xl space-y-3">
+                        <div className="flex items-center space-x-2 text-gray-300"><Zap size={18} /> <h4 className="font-bold">Feature 3</h4></div>
+                        <InputField label="Title" value={settings.feature_3_title || ''} onChange={(e) => handleSettingChange('feature_3_title', e.target.value)} />
+                        <InputField label="Description" value={settings.feature_3_desc || ''} onChange={(e) => handleSettingChange('feature_3_desc', e.target.value)} />
+                    </div>
+                </div>
+            </SectionWrapper>
+            
+            <SectionWrapper title="Payment Instructions" icon={CreditCard}>
+                <p className="text-sm text-gray-400">
+                    Enter the instruction text for each language. To remove a step, simply clear its text fields.
+                </p>
+                <div className="space-y-6">
+                    {Array.from({ length: 5 }).map((_, index) => {
+                        const step = index + 1;
+                        return (
+                            <div key={step} className="bg-slate-700/50 p-4 rounded-xl space-y-4 border border-slate-600">
+                                <h5 className="font-bold text-white">Instruction Step {step}</h5>
+                                <div className="grid md:grid-cols-2 gap-6 items-start">
+                                    <div className="space-y-4">
+                                        <TextAreaField
+                                            label={`English Text`}
+                                            value={settings[`payment_instruction_step_${step}_en`] || ''}
+                                            onChange={(e) => handleSettingChange(`payment_instruction_step_${step}_en`, e.target.value)}
+                                            placeholder={`Enter English text for step ${step}...`}
+                                            rows={2}
+                                        />
+                                        <TextAreaField
+                                            label={`Arabic Text`}
+                                            value={settings[`payment_instruction_step_${step}_ar`] || ''}
+                                            onChange={(e) => handleSettingChange(`payment_instruction_step_${step}_ar`, e.target.value)}
+                                            placeholder={`أدخل النص العربي للخطوة ${step}...`}
+                                            rows={2}
+                                            dir="rtl"
+                                        />
+                                        <TextAreaField
+                                            label={`Turkish Text`}
+                                            value={settings[`payment_instruction_step_${step}_tr`] || ''}
+                                            onChange={(e) => handleSettingChange(`payment_instruction_step_${step}_tr`, e.target.value)}
+                                            placeholder={`Adım ${step} için Türkçe metni girin...`}
+                                            rows={2}
+                                        />
+                                    </div>
+                                    <ImageUploadField
+                                        label={`Instruction Image`}
+                                        imageUrl={settings[`payment_instruction_image_${step}`] || ''}
+                                        onImageChange={(url) => handleSettingChange(`payment_instruction_image_${step}`, url)}
+                                        saving={saving}
+                                        setSaving={setSaving}
+                                        setError={setError}
+                                        setSuccess={setSuccess}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </SectionWrapper>
+
+            <SectionWrapper title="Footer" icon={Copyright}>
+                <InputField
+                    label="Copyright Text"
+                    value={settings.footer_copyright || ''}
+                    onChange={(e) => handleSettingChange('footer_copyright', e.target.value)}
+                    placeholder="e.g., © 2025 MySite. All rights reserved."
+                />
+            </SectionWrapper>
+
+            <div className="flex justify-end mt-8">
+                <button onClick={onSave} disabled={saving} className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white rounded-xl transition-all duration-300 disabled:opacity-50 text-lg font-bold">
+                    <Save className={`w-6 h-6 ${saving ? 'animate-spin' : ''}`} />
+                    <span>{saving ? 'Saving...' : 'Save All Changes'}</span>
+                </button>
+            </div>
+
+            {activeLibraryField && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-800 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto border border-slate-700">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-white">Select an Image from the Library</h3>
+                            <button onClick={() => setActiveLibraryField(null)} className="p-2 text-gray-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {AVAILABLE_IMAGES.map((image) => (
+                                <div 
+                                    key={image.id} 
+                                    className="bg-slate-700 rounded-xl p-4 cursor-pointer hover:bg-slate-600 transition-colors border-2 border-transparent hover:border-cyan-500" 
+                                    onClick={() => handleSelectFromLibrary(image.path)}
+                                >
+                                    <img src={image.path} alt={image.name} className="w-full h-24 object-contain rounded-lg mb-3"/>
+                                    <p className="text-white text-sm font-medium text-center">{image.name}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default SiteContentEditor;
